@@ -1,4 +1,5 @@
 from random import randint
+from time import time
 import os
 
 clear = lambda: os.system('clear')
@@ -53,47 +54,75 @@ def check_visability_accordance(matrix, visability_map):
 			return False
 	return True
 
-def generate_matrix(side_size, seed=None):
+def complement_matrix(_matrix, needle_count=None, seed=None):
+	matrix = [ [ col for col in row ] for row in _matrix ]
+	side_size = len(matrix)
 	if seed:
-		#translate seed into side_size numeric system
-		matrix = [ x for x in [ [ 0 for z in range(side_size) ] for y in range(side_size) ] ]
+		#translate seed into side_size numeric system with +1 offset
 		matrix_expanded = []
+		needle_count = needle_count if needle_count else side_size**2 
 		remains = seed
-		while remains > 0 and len(matrix_expanded) < side_size**2:
+		while remains > 0 and len(matrix_expanded) < needle_count:
 			remains, number = divmod(remains, side_size)
 			# разобрать пограничный случай в старшем разряде
 			matrix_expanded.append(number + 1)
 
-		for i, val in enumerate(matrix_expanded):
-			hor, vert = divmod(i, side_size)
-			matrix[hor][vert] = val
-	
+		for i, row in enumerate(matrix):
+			for j, col in enumerate(row):
+				if not col:
+					matrix[i][j] = matrix_expanded.pop() if len(matrix_expanded) > 0 else 1
 	else:
-		matrix = []
-		for i in range(side_size):
-			row = []
-			for j in range(side_size):
-				row.append(randint(1, side_size))
-			matrix.append(row)
+		for i, row in enumerate(matrix):
+			for j, col in enumerate(row):
+				if not col:
+					matrix[i][j] = randint(1, side_size)
 
 	return matrix
+
+def generate_matrix(side_size, visability_map=None):
+	matrix = [ [ None for z in range(side_size) ] for y in range(side_size) ]
+	needle_count = 0
+
+	# OPTIMIZATION
+	if visability_map:
+		for i, visible_skyscrapers in enumerate(visability_map['top']):
+			if visible_skyscrapers == 1:
+				matrix[0][i] = side_size
+			elif visible_skyscrapers == side_size:
+				for j in range(side_size):
+					matrix[j][i] = j+1
+
+		for i, visible_skyscrapers in enumerate(visability_map['bottom']):
+			if visible_skyscrapers == 1:
+				matrix[side_size-1][i] = side_size
+			elif visible_skyscrapers == side_size:
+				for j in range(side_size):
+					matrix[j][i] = side_size - j
+
+		for i, visible_skyscrapers in enumerate(visability_map['left']):
+			if visible_skyscrapers == 1:
+				matrix[i][0] = side_size
+			elif visible_skyscrapers == side_size:
+				for j in range(side_size):
+					matrix[i][j] = j+1
+
+		for i, visible_skyscrapers in enumerate(visability_map['right']):
+			if visible_skyscrapers == 1:
+				matrix[i][-1] = side_size
+			elif visible_skyscrapers == side_size:
+				for j in range(side_size):
+					matrix[i][j] = side_size - j
+
+	for i, row in enumerate(matrix):
+		for j, col in enumerate(row):
+			if not col:
+				needle_count += 1
+
+	return (needle_count, matrix)
 
 			
 					
 if __name__ == '__main__':
-	'''visability_map = {
-		'top': [4, 4, 1, 1],
-		'bottom': [1, 1, 4, 3],
-		'left': [3, 4, 2, 2],
-		'right': [2, 2, 3, 2],
-	}
-
-	matrix = [
-		[ 0, 1, 5, 4],
-		[ 1, 2, 3, 3],
-		[ 2, 3, 1, 0],
-		[ 3, 4, 0, 1],
-	]'''
 	side_size = int(input("ENTER SIDE SIZE: "))
 	visability_map = {
 		'top': [ int(x) for x in input('ENTER TOP: ') ],
@@ -104,20 +133,34 @@ if __name__ == '__main__':
 	use_random = input('ENTER "y" FOR RANDOM METHOD ELSE NOTHING: ')
 	is_viewing = input('ENTER "y" FOR WATCHING MATRIX ELSE NOTHING: ')
 	print('processing...')
-	#seed = int('0'*side_size**2, 4)
+
+	last_time = time()
+	needle_count, optimized_matrix = generate_matrix(side_size, visability_map)
 	seed = 0
-	while True:
+	max_seed = int(str(side_size-1)*needle_count, side_size)
+	print('max iterations:', max_seed)
+	matrix = None
+
+	while seed < max_seed:
 		if use_random == 'y':
-			matrix = generate_matrix(side_size)
+			matrix = complement_matrix(optimized_matrix)
 		else:
 			seed += 1
-			matrix = generate_matrix(side_size, seed)
-		clear()
+			matrix = complement_matrix(optimized_matrix, needle_count, seed)
+
 		if is_viewing:
+			clear()
+			print(1/(time()-last_time), 'iters per second')
+			last_time = time()
 			for row in matrix:
 				print(row)
 		if check_dublicate_numbers(matrix) and check_visability_accordance(matrix, visability_map):
 			break
 
-	for el in matrix:
-		print(el)
+	print('='*10)
+	print(seed, 'generations in', time()-last_time, 's')
+	if seed == max_seed:
+		print('NO RESULT')
+	else:
+		for el in matrix:
+			print(el)
