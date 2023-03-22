@@ -1,0 +1,149 @@
+Информатика 22.03.2023
+
+3 модуль (основной)
+Тема: ссылочный тип
+Предпосылки — исторически, экономия
+
+Ссылочный тип:
+Type 
+	\имя типа\ = ^\базовый тип\
+	PInt = ^integer;
+
+Var p:PInt; (p) - адрес первого байта участка памяти, в котором располагается какое-то значение базового типа
+
+Пример присвоения: 
+Var I:integer;
+	p:PInt;
+Begin
+	p := @I; (@) - операция взятия адреса
+
+Указатель на указатель
+TPoint = ^integer;
+Var 
+	p: TPoint;
+	pp: ^TPoint; - указатель на указатели
+
+Среди всех указателей выделяется один указатель, который не указывает в никуда - этот указатель обозначается служебным словом nil (важная константа)
+
+Операции с указателями:
+1. Сравнение на равенство и неравенство (ссылаются ли два указателя на одно и то же место или нет) var f: boolean; p1, p2: TPoint; begin f:=p1=p2; - переменная получит значение, True, если  p1 и p2 ссылаются на один и тот же адрес. Изначально нужно инициализировать p1 := nil
+2. Операция разименования (получение значения). Если нужно получить доступ к значению, на которое ссылается указатель, придерживаться синтаксиса p1^
+
+p^ := p^ + 2;
+I := I + 2; строки синонимичны
+
+Type Stud: record
+	name: string[15];
+	year: integer;
+End;
+
+var s: Stud;
+	PS: ^Stud;
+
+begin
+	… 
+	PS^.name := ‘Ivanov’;
+	PS^.year := 2000;
+
+Помимо типизированных указателей, есть еще один стандартный ссылочный тип, переменные которого называются нетипизированными указателями. Для их описания используется тип Pointer.
+
+Var p1: ^Integer;
+	p2: ^Real;
+	p3: Pointer;
+
+begin
+	p1 := p2; - fatal anal
+	p3 := p1; - nice
+	p2 := p3; - awesome
+
+Не рекомендуется использовать нетипизированный указатель.
+
+Статические и динамические переменные.
+Создание и уничтожение динамических переменных.
+Для создания динамической переменной необходимо создать для нее область памяти:
+Proc New(var p: Pointer) — будет выделена память в размере объема, занимаемого типом данных, на который указывает аргумент.
+
+Освобождение: Dispose(p: Pointer);
+
+GetMemory(p: Pointer, size: integer); —  резервирование
+FreeMemory(p: Pointer, size: integer); — освобождение
+
+GetMemory(p, 4*1024);
+FreeMemory(p, 4*1024);
+
+
+…
+Procedure CreateDynM1()
+Var I,j:integer;
+	a: ^Real;
+Begin
+	getMemory(a, Sizeof(real)*n*m);
+	h := a;
+	for I := 0 to n-1 do
+		for j := 0 to n-1 do
+		begin
+			a^ := Random(100);
+			a := a + 1; // or
+			a := a + sizeof(real); // or
+		end;
+End;
+
+function MinEl1(): real;
+Var i,j: integer;
+	min: real;
+	a: ^real;
+Begin
+	a:=h;
+	min := a^;
+	for I := 0 to n-1 do
+		for j := 0 to m-1 do
+			begin
+				a += sizeof(real);
+				if a^ < min then min = a^
+			end;
+End;
+
+Procedure DelDynM(var h: Pointer, u:integer);
+Var I :integer;
+	a: ^ArrPtr;
+Begin
+	a := h;
+	for I := 0 to n-1 do
+		Dispose(a^);
+	Dispose(a);
+End;
+
+Procedure DelDynM1()
+begin
+	FreeMem(h, sizeOf(read)*n*m);
+end;
+…
+
+Динамические массивы: каким образом определяется тип динамического массива.
+
+Type DArr = Array of real;
+Var brd, ard: DArr;
+	I, n: integer;
+Begin
+	SetLength(ard, n); — нумерация в динамических массивах от нуля
+	… тут пишем код …
+	ard[0] := 10;
+	brd := ard;
+	brd[0] := 100;
+	// ard[0] == 100
+	for I := low(ard) to high(ard) do
+	begin
+		ard[i] := i+10;
+		write(ard[I]:5:0); // 0 10 20 30 40 50 60 70 80 90
+	end;
+	brd := copy(ard, 4, 5);
+
+	for I := low(brd) to high(brd) do
+	begin
+		write(brd[I]:5:0); // 40 50 60 70 80
+	end;
+End;
+
+low(имя массива) - индекс 
+hign(имя массива) - индекс
+Copy(name, startintex, elements count) - копирование массива
